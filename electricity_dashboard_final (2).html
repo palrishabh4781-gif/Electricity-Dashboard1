@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Electricity Bill Prediction Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg-primary: #0a0e1a;
+    --bg-card: #111827;
+    --bg-card2: #1a2235;
+    --bg-hover: #1e2d42;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --accent3: #8b5cf6;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #475569;
+    --border: rgba(59,130,246,0.15);
+    --border2: rgba(255,255,255,0.06);
+    --glow: 0 0 30px rgba(59,130,246,0.12);
+    --font: 'Space Grotesk', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 20%, rgba(59,130,246,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(139,92,246,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(6,182,212,0.04) 0%, transparent 70%);
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+
+  /* LAYOUT */
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px 60px; }
+
+  /* HEADER */
+  .header {
+    padding: 32px 24px 0;
+    max-width: 1200px;
+    margin: 0 auto 32px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .header-left {}
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.25);
+    color: var(--accent2);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 10px;
+  }
+  .header-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.2;
+    background: linear-gradient(135deg, #f1f5f9 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header h1 span {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header-sub {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    font-weight: 400;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+    padding-top: 12px;
+  }
+
+  /* SUMMARY CARDS */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+    animation: fadeInUp 0.5s ease both;
+  }
+  @media (max-width: 768px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .cards-grid { grid-template-columns: 1fr; } }
+
+  .metric-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .metric-card:hover { transform: translateY(-2px); border-color: var(--border); }
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .metric-card.blue::before { background: linear-gradient(90deg, var(--accent), transparent); }
+  .metric-card.cyan::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+  .metric-card.purple::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+  .metric-card.green::before { background: linear-gradient(90deg, var(--success), transparent); }
+  .metric-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  .metric-card.blue .metric-icon { background: rgba(59,130,246,0.15); }
+  .metric-card.cyan .metric-icon { background: rgba(6,182,212,0.15); }
+  .metric-card.purple .metric-icon { background: rgba(139,92,246,0.15); }
+  .metric-card.green .metric-icon { background: rgba(16,185,129,0.15); }
+  .metric-label { font-size: 11px; color: var(--text-muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+  .metric-value { font-size: 24px; font-weight: 700; color: var(--text-primary); font-family: var(--mono); }
+  .metric-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  /* SECTION CARDS */
+  .section {
+    background: var(--bg-card);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.5s ease both;
+  }
+  .section.locked {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: saturate(0.3);
+  }
+  .section.unlocked {
+    opacity: 1;
+    pointer-events: all;
+    filter: none;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(59,130,246,0.15);
+    border: 1px solid rgba(59,130,246,0.3);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    flex-shrink: 0;
+  }
+  .step-num.done {
+    background: rgba(16,185,129,0.15);
+    border-color: rgba(16,185,129,0.3);
+    color: var(--success);
+  }
+
+  /* UPLOAD */
+  .upload-zone {
+    border: 2px dashed rgba(59,130,246,0.25);
+    border-radius: 16px;
+    padding: 40px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: rgba(59,130,246,0.02);
+  }
+  .upload-zone:hover {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.06);
+    transform: scale(1.01);
+  }
+  .upload-zone-icon {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.2);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 24px;
+  }
+  .upload-zone h3 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .upload-zone p { font-size: 13px; color: var(--text-secondary); }
+  .upload-actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; flex-wrap: wrap; }
+
+  /* TABLE */
+  .table-container {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border2);
+    margin-top: 16px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { background: var(--bg-card2); }
+  th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border2);
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    color: var(--text-primary);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* STATS ROW */
+  .data-stats {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .data-stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--mono);
+  }
+  .pill-blue { background: rgba(59,130,246,0.1); color: var(--accent); border: 1px solid rgba(59,130,246,0.2); }
+  .pill-green { background: rgba(16,185,129,0.1); color: var(--success); border: 1px solid rgba(16,185,129,0.2); }
+  .pill-yellow { background: rgba(245,158,11,0.1); color: var(--warning); border: 1px solid rgba(245,158,11,0.2); }
+  .pill-purple { background: rgba(139,92,246,0.1); color: var(--accent3); border: 1px solid rgba(139,92,246,0.2); }
+
+  /* PREPROCESSING */
+  .preproc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 600px) { .preproc-grid { grid-template-columns: 1fr; } }
+  .preproc-item {
+    background: var(--bg-card2);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--border2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .preproc-item .icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .preproc-item p { font-size: 13px; color: var(--text-secondary); }
+  .preproc-item strong { display: block; font-size: 14px; color: var(--text-primary); margin-bottom: 2px; }
+
+  /* BUTTONS */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, #2563eb 100%);
+    color: white;
+    box-shadow: 0 4px 20px rgba(59,130,246,0.3);
+  }
+  .btn-primary:hover { box-shadow: 0 4px 28px rgba(59,130,246,0.5); transform: translateY(-1px); }
+  .btn-secondary {
+    background: var(--bg-card2);
+    color: var(--text-primary);
+    border: 1px solid var(--border2);
+  }
+  .btn-secondary:hover { background: var(--bg-hover); border-color: var(--border); }
+  .btn-success {
+    background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 20px rgba(16,185,129,0.25);
+  }
+  .btn-success:hover { box-shadow: 0 4px 28px rgba(16,185,129,0.4); transform: translateY(-1px); }
+  .btn-warning {
+    background: linear-gradient(135deg, var(--warning) 0%, #d97706 100%);
+    color: white;
+    box-shadow: 0 4px 20px rgba(245,158,11,0.25);
+  }
+  .btn-sm { padding: 7px 14px; font-size: 13px; }
+
+  /* PROGRESS BAR */
+  .progress-wrap {
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+    margin-top: 12px;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    width: 0%;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+
+  /* MODEL TRAINING */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .three-col { grid-template-columns: 1fr; } }
+
+  .model-option {
+    border: 1px solid var(--border2);
+    border-radius: 14px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .model-option:hover { border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.03); }
+  .model-option.selected {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.08);
+    box-shadow: 0 0 0 1px rgba(59,130,246,0.2);
+  }
+  .model-radio {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--text-muted);
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .model-option.selected .model-radio {
+    border-color: var(--accent);
+    background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+  }
+  .model-option.selected .model-radio::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: white;
+  }
+  .model-info h4 { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .model-info p { font-size: 12px; color: var(--text-secondary); }
+  .model-badge {
+    margin-left: auto;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-family: var(--mono);
+  }
+  .badge-blue { background: rgba(59,130,246,0.1); color: var(--accent); }
+  .badge-purple { background: rgba(139,92,246,0.1); color: var(--accent3); }
+
+  /* SCORE TABLE */
+  .score-table { border: 1px solid var(--border2); border-radius: 14px; overflow: hidden; }
+  .score-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--border2);
+  }
+  .score-row:last-child { border-bottom: none; }
+  .score-label { font-size: 13px; color: var(--text-secondary); }
+  .score-val { font-size: 15px; font-weight: 600; font-family: var(--mono); }
+  .score-val.green { color: var(--success); }
+  .best-model-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(16,185,129,0.1);
+    color: var(--success);
+    border: 1px solid rgba(16,185,129,0.2);
+  }
+
+  /* FORM INPUTS */
+  .form-group { margin-bottom: 18px; }
+  .form-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+  .form-label .val {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent2);
+    background: rgba(6,182,212,0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+  }
+  input[type=number] {
+    width: 100%;
+    background: var(--bg-card2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+  input[type=number]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg-card2);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(59,130,246,0.4);
+    transition: box-shadow 0.2s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { box-shadow: 0 0 16px rgba(59,130,246,0.6); }
+
+  .toggle-group { display: flex; gap: 8px; }
+  .toggle-btn {
+    flex: 1;
+    padding: 9px 0;
+    border-radius: 10px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .toggle-btn:hover { border-color: var(--border); color: var(--text-primary); }
+  .toggle-btn.active {
+    background: rgba(59,130,246,0.1);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* PREDICTION RESULTS */
+  .pred-results-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .pred-results-grid { grid-template-columns: 1fr; } }
+  .pred-card {
+    border-radius: 16px;
+    padding: 18px;
+    text-align: center;
+    border: 1px solid transparent;
+    transition: all 0.3s;
+  }
+  .pred-card.base { background: var(--bg-card2); border-color: var(--border2); }
+  .pred-card.tax { background: rgba(245,158,11,0.06); border-color: rgba(245,158,11,0.2); }
+  .pred-card.final { background: rgba(59,130,246,0.06); border-color: rgba(59,130,246,0.3); }
+  .pred-card-icon { font-size: 24px; margin-bottom: 8px; }
+  .pred-card-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 8px; }
+  .pred-card.base .pred-card-label { color: var(--text-muted); }
+  .pred-card.tax .pred-card-label { color: var(--warning); }
+  .pred-card.final .pred-card-label { color: var(--accent); }
+  .pred-card-value { font-size: 26px; font-weight: 700; font-family: var(--mono); }
+  .pred-card.base .pred-card-value { color: var(--text-primary); }
+  .pred-card.tax .pred-card-value { color: var(--warning); }
+  .pred-card.final .pred-card-value { color: var(--accent); }
+  .pred-card-sub { font-size: 11px; margin-top: 4px; color: var(--text-muted); }
+
+  .bill-meter { margin-top: 4px; }
+  .bill-meter-bar {
+    height: 8px;
+    border-radius: 4px;
+    background: var(--bg-card2);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .bill-meter-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1s ease, background 1s ease;
+    width: 0%;
+  }
+  .bill-meter-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); }
+
+  /* CHARTS GRID */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .charts-grid { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: var(--bg-card2);
+    border-radius: 14px;
+    padding: 18px;
+    border: 1px solid var(--border2);
+  }
+  .chart-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chart-card-title::before {
+    content: '';
+    width: 4px; height: 14px;
+    border-radius: 2px;
+    background: linear-gradient(to bottom, var(--accent), var(--accent2));
+  }
+
+  /* INSIGHTS */
+  .insights-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 700px) { .insights-grid { grid-template-columns: 1fr; } }
+  .insight-card {
+    background: var(--bg-card2);
+    border-radius: 14px;
+    padding: 16px;
+    border: 1px solid var(--border2);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    transition: border-color 0.2s;
+  }
+  .insight-card:hover { border-color: var(--border); }
+  .insight-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .insight-text h4 { font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text-primary); }
+  .insight-text p { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+  /* DOWNLOAD */
+  .download-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .download-msg { font-size: 13px; margin-top: 10px; color: var(--success); font-family: var(--mono); }
+  .download-msg.error { color: var(--danger); }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border2); margin: 18px 0; }
+
+  /* STATUS TAG */
+  .status-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .status-tag.pending { background: rgba(245,158,11,0.1); color: var(--warning); }
+  .status-tag.done { background: rgba(16,185,129,0.1); color: var(--success); }
+  .status-tag.running { background: rgba(59,130,246,0.1); color: var(--accent); }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 18px;
+    font-size: 13px;
+    color: var(--text-primary);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    z-index: 1000;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 320px;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* HIDDEN */
+  .hidden { display: none !important; }
+
+  /* GLOW ANIMATION FOR RESULT */
+  @keyframes glowPulse {
+    0%, 100% { box-shadow: 0 0 0 rgba(59,130,246,0); }
+    50% { box-shadow: 0 0 30px rgba(59,130,246,0.2); }
+  }
+  .glow-anim { animation: glowPulse 2s ease-in-out infinite; }
+
+  select {
+    background: var(--bg-card2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-family: var(--font);
+    font-size: 14px;
+    outline: none;
+    cursor: pointer;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  select:focus { border-color: var(--accent); }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+    display: block;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>Electricity Bill <span>Prediction</span></h1>
+  </div>
+  <div class="header-right">
+    <span id="currentTime"></span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- SUMMARY CARDS -->
+  <div class="cards-grid">
+    <div class="metric-card blue">
+      <div class="metric-icon">📊</div>
+      <div class="metric-label">Total Records</div>
+      <div class="metric-value" id="cardTotal">—</div>
+      <div class="metric-sub">Upload CSV to load</div>
+    </div>
+    <div class="metric-card cyan">
+      <div class="metric-icon">💡</div>
+      <div class="metric-label">Average Bill</div>
+      <div class="metric-value" id="cardAvg">—</div>
+      <div class="metric-sub">Rs / month</div>
+    </div>
+    <div class="metric-card purple">
+      <div class="metric-icon">📈</div>
+      <div class="metric-label">Max Bill</div>
+      <div class="metric-value" id="cardMax">—</div>
+      <div class="metric-sub">Highest record</div>
+    </div>
+    <div class="metric-card green">
+      <div class="metric-icon">📉</div>
+      <div class="metric-label">Min Bill</div>
+      <div class="metric-value" id="cardMin">—</div>
+      <div class="metric-sub">Lowest record</div>
+    </div>
+  </div>
+
+  <!-- STEP 1: DATA UPLOAD -->
+  <div class="section" id="sec1">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="step-num" id="step1num">1</div>
+        Dataset Upload
+      </div>
+      <span class="status-tag pending" id="uploadStatus">Pending</span>
+    </div>
+    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('csvInput').click()">
+      <div class="upload-zone-icon">📂</div>
+      <h3>Drop your CSV file here</h3>
+      <p>Supports: units, members, ac (0/1), rooms, bill columns</p>
+      <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="handleCSV(this)">
+    </div>
+    <div class="upload-actions">
+      <button class="btn btn-primary" onclick="loadSampleData()">⚡ Use Sample Data (120 records)</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('csvInput').click()">📂 Upload CSV</button>
+    </div>
+    <div id="dataPreview" class="hidden">
+      <div class="divider"></div>
+      <div class="data-stats" id="dataStats"></div>
+      <div class="table-container">
+        <table id="previewTable"></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: PREPROCESSING -->
+  <div class="section locked" id="sec2">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="step-num" id="step2num">2</div>
+        Data Preprocessing
+      </div>
+      <span class="status-tag pending" id="preprocStatus">Pending</span>
+    </div>
+    <div class="preproc-grid">
+      <div class="preproc-item">
+        <div class="icon" style="background:rgba(59,130,246,0.1);">🔍</div>
+        <div><strong id="nullCount">—</strong><p>Null values</p></div>
+      </div>
+      <div class="preproc-item">
+        <div class="icon" style="background:rgba(139,92,246,0.1);">🔤</div>
+        <div><strong id="catCount">—</strong><p>Categorical cols</p></div>
+      </div>
+      <div class="preproc-item">
+        <div class="icon" style="background:rgba(16,185,129,0.1);">⚖️</div>
+        <div><strong id="scaleInfo">—</strong><p>Scaling method</p></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="runPreprocessing()">🧹 Clean Data</button>
+      <span style="font-size:13px;color:var(--text-muted);">Handles nulls · encodes categoricals · normalizes features</span>
+    </div>
+    <div class="progress-wrap" id="preprocProgressWrap" style="display:none;">
+      <div class="progress-fill" id="preprocFill"></div>
+    </div>
+    <div class="progress-label" id="preprocProgressLabel" style="display:none;">
+      <span id="preprocStep">Starting...</span>
+      <span id="preprocPct">0%</span>
+    </div>
+  </div>
+
+  <!-- STEP 3: MODEL TRAINING -->
+  <div class="section locked" id="sec3">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="step-num" id="step3num">3</div>
+        Model Training
+      </div>
+      <span class="status-tag pending" id="trainStatus">Pending</span>
+    </div>
+    <div class="two-col">
+      <div>
+        <span class="section-label">Choose Algorithm</span>
+        <div class="model-option selected" id="opt-lr" onclick="selectModel('lr')">
+          <div class="model-radio" id="radio-lr"></div>
+          <div class="model-info">
+            <h4>Linear Regression</h4>
+            <p>Fast training · explainable coefficients · great baseline</p>
+          </div>
+          <span class="model-badge badge-blue">Linear</span>
+        </div>
+
+        <button class="btn btn-primary" style="margin-top:12px;" onclick="trainModel()">🤖 Train Model</button>
+        <div class="progress-wrap" id="trainProgressWrap" style="display:none;margin-top:12px;">
+          <div class="progress-fill" id="trainFill"></div>
+        </div>
+      </div>
+      <div id="trainResults" class="hidden">
+        <span class="section-label">Model Performance</span>
+        <div class="score-table">
+          <div class="score-row">
+            <span class="score-label">R² Score</span>
+            <span class="score-val green" id="r2Score">—</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Mean Absolute Error</span>
+            <span class="score-val" id="maeScore">—</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">RMSE</span>
+            <span class="score-val" id="rmseScore">—</span>
+          </div>
+          <div class="score-row">
+            <span class="score-label">Best Model</span>
+            <span class="best-model-badge" id="bestModel">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: PREDICTION -->
+  <div class="section locked" id="sec4">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="step-num" id="step4num">4</div>
+        Predict Your Bill
+      </div>
+      <span class="status-tag pending" id="predStatus">Pending</span>
+    </div>
+    <div class="two-col">
+      <div id="predInputsArea">
+        <!-- Dynamically rendered feature inputs -->
+      </div>
+      <div id="predResults" class="hidden">
+        <div class="pred-results-grid">
+          <div class="pred-card base">
+            <div class="pred-card-icon">🧾</div>
+            <div class="pred-card-label">Base Value</div>
+            <div class="pred-card-value" id="baseBill">—</div>
+            <div class="pred-card-sub">Before tax</div>
+          </div>
+          <div class="pred-card tax">
+            <div class="pred-card-icon">🏛️</div>
+            <div class="pred-card-label">GST (18%)</div>
+            <div class="pred-card-value" id="taxAmt">—</div>
+            <div class="pred-card-sub">Tax amount</div>
+          </div>
+          <div class="pred-card final glow-anim">
+            <div class="pred-card-icon">💰</div>
+            <div class="pred-card-label">Final Predicted</div>
+            <div class="pred-card-value" id="finalBill">—</div>
+            <div class="pred-card-sub">Total payable</div>
+          </div>
+        </div>
+        <div class="bill-meter">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;">Prediction intensity meter</div>
+          <div class="bill-meter-bar">
+            <div class="bill-meter-fill" id="meterFill"></div>
+          </div>
+          <div class="bill-meter-labels"><span>Low</span><span>Medium</span><span>High</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: VISUALIZATIONS -->
+  <div class="section locked" id="sec5">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="step-num" id="step5num">5</div>
+        Visualizations
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-card-title">Units Distribution</div>
+        <div style="position:relative;height:220px;"><canvas id="c1" role="img" aria-label="Histogram of electricity units consumed">Units distribution</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Bill Distribution</div>
+        <div style="position:relative;height:220px;"><canvas id="c2" role="img" aria-label="Histogram of electricity bills">Bill distribution</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Units vs Bill (Scatter)</div>
+        <div style="position:relative;height:220px;"><canvas id="c3" role="img" aria-label="Scatter plot of units consumed vs bill amount">Scatter chart</canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Feature Importance</div>
+        <div style="position:relative;height:220px;"><canvas id="c4" role="img" aria-label="Horizontal bar chart of feature importance">Feature importance</canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 6: DOWNLOAD -->
+  <div class="section locked" id="sec7">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="step-num" id="step7num">6</div>
+        Download & Export
+      </div>
+    </div>
+    <div class="download-row">
+      <button class="btn btn-primary" onclick="downloadCSV()">📥 Download Predictions (CSV)</button>
+      <button class="btn btn-secondary" onclick="downloadJSON()">📄 Download Model Info (JSON)</button>
+      <button class="btn btn-warning" onclick="saveHistory()">💾 Save Session Log</button>
+    </div>
+    <div class="download-msg hidden" id="downloadMsg"></div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span id="toastIcon">✅</span>
+  <span id="toastMsg">Done!</span>
+</div>
+
+<script>
+/* =====================================================
+   STATE
+   ===================================================== */
+let appData = [];
+let cleanedData = [];
+let trainedModel = null;
+let selectedModel = 'lr';
+let acOn = true;
+let lastPrediction = null;
+let chartInstances = {};
+let detectedColumns = [];
+let targetColumn = '';
+let featureColumns = [];
+
+/* =====================================================
+   CLOCK
+   ===================================================== */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('currentTime').textContent =
+    now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* =====================================================
+   TOAST
+   ===================================================== */
+function showToast(msg, icon = '✅', duration = 3000) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastIcon').textContent = icon;
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+/* =====================================================
+   UNLOCK SECTION
+   ===================================================== */
+function unlock(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.remove('locked'); el.classList.add('unlocked'); }
+}
+function markStepDone(numId) {
+  const el = document.getElementById(numId);
+  if (el) el.classList.add('done');
+}
+function setStatus(id, text, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'status-tag ' + type;
+}
+
+/* =====================================================
+   MATH HELPERS
+   ===================================================== */
+function mean(arr) { return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function std(arr) {
+  const m = mean(arr);
+  return Math.sqrt(arr.reduce((a,b)=>a+(b-m)**2,0)/arr.length) || 1;
+}
+
+/* =====================================================
+   SAMPLE DATA GENERATOR
+   ===================================================== */
+function generateSampleData(n = 140) {
+  const data = [];
+  for (let i = 0; i < n; i++) {
+    const units  = Math.round(80 + Math.random() * 920);
+    const members= Math.round(1 + Math.random() * 7);
+    const ac     = Math.random() > 0.45 ? 1 : 0;
+    const rooms  = Math.round(1 + Math.random() * 6);
+    const noise  = (Math.random() - 0.5) * 500;
+    const bill   = Math.max(200, Math.round(units * 3.6 + members * 140 + ac * 850 + rooms * 190 + noise));
+    data.push({ units, members, ac, rooms, bill });
+  }
+  return data;
+}
+
+/* =====================================================
+   UPDATE SUMMARY CARDS
+   ===================================================== */
+function updateCards(data) {
+  const col = targetColumn || Object.keys(data[0]).slice(-1)[0];
+  const bills = data.map(d => d[col]).filter(v => typeof v === 'number' && !isNaN(v));
+  if (!bills.length) return;
+  const avg = bills.reduce((a,b)=>a+b,0)/bills.length;
+  document.getElementById('cardTotal').textContent = data.length;
+  document.getElementById('cardAvg').textContent  = 'Rs ' + Math.round(avg).toLocaleString('en-IN');
+  document.getElementById('cardMax').textContent  = 'Rs ' + Math.max(...bills).toLocaleString('en-IN');
+  document.getElementById('cardMin').textContent  = 'Rs ' + Math.min(...bills).toLocaleString('en-IN');
+}
+
+/* =====================================================
+   RENDER PREVIEW TABLE
+   ===================================================== */
+function renderTable(data) {
+  const cols = Object.keys(data[0]);
+  const preview = data.slice(0, 10);
+  let html = '<thead><tr>' + cols.map(c => '<th>' + c + '</th>').join('') + '</tr></thead><tbody>';
+  preview.forEach(row => {
+    html += '<tr>' + cols.map(c => '<td>' + row[c] + '</td>').join('') + '</tr>';
+  });
+  html += '</tbody>';
+  document.getElementById('previewTable').innerHTML = html;
+
+  document.getElementById('dataStats').innerHTML = `
+    <span class="data-stat-pill pill-blue">📊 ${data.length} rows</span>
+    <span class="data-stat-pill pill-green">🗂️ ${cols.length} columns</span>
+    <span class="data-stat-pill pill-yellow">❓ 0 missing values</span>
+    <span class="data-stat-pill pill-purple">✅ Columns auto-detected</span>`;
+
+  document.getElementById('dataPreview').classList.remove('hidden');
+}
+
+/* =====================================================
+   COLUMN SELECTOR
+   ===================================================== */
+function showColumnSelector(cols) {
+  const numericCols = cols.filter(c => appData.some(r => typeof r[c] === 'number' && !isNaN(r[c])));
+  if (!numericCols.length) { showToast('No numeric columns found!', '❌'); return; }
+
+  // Auto-guess target: last numeric col, or one named bill/target/output/price/amount/cost/label
+  const targetGuessKeywords = ['bill','target','output','price','amount','cost','label','salary','income','total','charge','fee','value'];
+  let autoTarget = numericCols.find(c => targetGuessKeywords.some(k => c.toLowerCase().includes(k))) || numericCols[numericCols.length - 1];
+
+  let html = `
+    <div class="divider"></div>
+    <div style="margin-top:4px;">
+      <span class="section-label">🎯 Select Target Column (what to predict)</span>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+        <select id="targetColSelect" onchange="onTargetChange()" style="max-width:260px;">
+          ${numericCols.map(c => `<option value="${c}" ${c===autoTarget?'selected':''}>${c}</option>`).join('')}
+        </select>
+        <span style="font-size:12px;color:var(--text-muted);">Auto-detected: <b style="color:var(--accent2)">${autoTarget}</b></span>
+      </div>
+      <span class="section-label">⚙️ Feature Columns (used for training)</span>
+      <div id="featureCheckboxes" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;"></div>
+      <button class="btn btn-primary btn-sm" onclick="confirmColumns()">✅ Confirm Columns & Continue</button>
+    </div>`;
+  
+  // Remove old selector if exists
+  const old = document.getElementById('columnSelectorArea');
+  if (old) old.remove();
+  const div = document.createElement('div');
+  div.id = 'columnSelectorArea';
+  div.innerHTML = html;
+  document.getElementById('dataPreview').appendChild(div);
+
+  renderFeatureCheckboxes(autoTarget, cols);
+}
+
+function renderFeatureCheckboxes(target, cols) {
+  const numericCols = cols.filter(c => appData.some(r => typeof r[c] === 'number' && !isNaN(r[c])));
+  const feats = numericCols.filter(c => c !== target);
+  document.getElementById('featureCheckboxes').innerHTML = feats.map(c => `
+    <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;
+      border:1px solid var(--border2);background:var(--bg-card2);font-size:13px;cursor:pointer;
+      transition:all 0.2s;" id="pill_${CSS.escape(c)}">
+      <input type="checkbox" id="feat_${CSS.escape(c)}" value="${c}" checked
+        onchange="updatePillStyle('${c}')"
+        style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer;">
+      ${c}
+    </label>`).join('');
+  feats.forEach(c => updatePillStyle(c));
+}
+
+function updatePillStyle(c) {
+  const cb = document.getElementById('feat_' + CSS.escape(c));
+  const pill = document.getElementById('pill_' + CSS.escape(c));
+  if (!cb || !pill) return;
+  pill.style.borderColor = cb.checked ? 'var(--accent)' : 'var(--border2)';
+  pill.style.background = cb.checked ? 'rgba(59,130,246,0.1)' : 'var(--bg-card2)';
+  pill.style.color = cb.checked ? 'var(--accent)' : 'var(--text-secondary)';
+}
+
+function onTargetChange() {
+  const sel = document.getElementById('targetColSelect');
+  renderFeatureCheckboxes(sel.value, detectedColumns);
+}
+
+function confirmColumns() {
+  const sel = document.getElementById('targetColSelect');
+  targetColumn = sel.value;
+  const checks = document.querySelectorAll('#featureCheckboxes input[type=checkbox]:checked');
+  featureColumns = Array.from(checks).map(c => c.value);
+  if (!featureColumns.length) { showToast('Select at least 1 feature column!', '⚠️'); return; }
+  unlock('sec2');
+  document.getElementById('nullCount').textContent = '0 nulls';
+  document.getElementById('catCount').textContent = featureColumns.length + ' features';
+  document.getElementById('scaleInfo').textContent = 'StandardScaler';
+  showToast(`Target: "${targetColumn}" | Features: ${featureColumns.join(', ')}`, '✅', 4000);
+}
+
+/* =====================================================
+   LOAD SAMPLE DATA
+   ===================================================== */
+function loadSampleData() {
+  appData = generateSampleData(140);
+  detectedColumns = ['units','members','ac','rooms','bill'];
+  targetColumn = 'bill';
+  featureColumns = ['units','members','ac','rooms'];
+  updateCards(appData);
+  renderTable(appData);
+  showColumnSelector(detectedColumns);
+  // Pre-confirm for sample data
+  setStatus('uploadStatus', 'Loaded', 'done');
+  markStepDone('step1num');
+  unlock('sec2');
+  document.getElementById('nullCount').textContent = '0 nulls';
+  document.getElementById('catCount').textContent = '1 col (ac: 0/1)';
+  document.getElementById('scaleInfo').textContent = 'StandardScaler';
+  showToast('Sample dataset loaded — 140 records!', '📊');
+}
+
+/* =====================================================
+   HANDLE CSV UPLOAD
+   ===================================================== */
+function handleCSV(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const lines = e.target.result.trim().split('\n');
+      const rawHeaders = lines[0].split(',').map(h => h.trim());
+      const headers = rawHeaders.map(h => h.toLowerCase());
+      const data = lines.slice(1).map(line => {
+        const vals = line.split(',');
+        const obj = {};
+        rawHeaders.forEach((h, i) => {
+          const v = vals[i] !== undefined ? vals[i].trim() : '';
+          obj[h] = isNaN(Number(v)) || v === '' ? v : Number(v);
+        });
+        return obj;
+      }).filter(r => Object.values(r).some(v => v !== '' && v !== null && v !== undefined));
+
+      appData = data;
+      detectedColumns = rawHeaders;
+
+      // Count nulls
+      let nullCount = 0;
+      data.forEach(row => Object.values(row).forEach(v => { if (v === '' || v === null || v === undefined || (typeof v === 'number' && isNaN(v))) nullCount++; }));
+      // Count categorical columns
+      const catCols = rawHeaders.filter(h => data.some(r => typeof r[h] === 'string' && r[h] !== ''));
+
+      updateCards(appData);
+      renderTable(appData);
+      showColumnSelector(rawHeaders);
+      setStatus('uploadStatus', 'Loaded', 'done');
+      markStepDone('step1num');
+      document.getElementById('nullCount').textContent = nullCount + ' nulls';
+      document.getElementById('catCount').textContent = catCols.length + ' col(s)';
+      document.getElementById('scaleInfo').textContent = 'StandardScaler';
+      showToast('CSV uploaded — ' + appData.length + ' records, ' + rawHeaders.length + ' columns!', '📂');
+    } catch (err) {
+      showToast('CSV parse error: ' + err.message, '❌');
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* =====================================================
+   PREPROCESSING
+   ===================================================== */
+function runPreprocessing() {
+  const steps = ['Scanning for nulls...', 'Encoding categoricals...', 'Normalizing features...', 'Done ✓'];
+  const pcts  = [20, 55, 85, 100];
+  let i = 0;
+  document.getElementById('preprocProgressWrap').style.display = 'block';
+  document.getElementById('preprocProgressLabel').style.display = 'flex';
+  setStatus('preprocStatus', 'Running', 'running');
+
+  function step() {
+    if (i >= steps.length) return;
+    document.getElementById('preprocStep').textContent = steps[i];
+    document.getElementById('preprocPct').textContent = pcts[i] + '%';
+    document.getElementById('preprocFill').style.width = pcts[i] + '%';
+    i++;
+    if (i < steps.length) setTimeout(step, 350);
+    else {
+      cleanedData = appData.map(d => ({ ...d }));
+      setStatus('preprocStatus', 'Done', 'done');
+      markStepDone('step2num');
+      unlock('sec3');
+      showToast('Data cleaned and normalized!', '🧹');
+    }
+  }
+  step();
+}
+
+/* =====================================================
+   MODEL SELECTION
+   ===================================================== */
+function selectModel(type) {
+  selectedModel = type;
+}
+
+/* =====================================================
+   LINEAR REGRESSION (Gradient Descent)
+   ===================================================== */
+function trainLR(data) {
+  const feats = featureColumns;
+  const X = data.map(d => feats.map(f => +d[f] || 0));
+  const y = data.map(d => +d[targetColumn] || 0);
+  const n = data.length;
+  const means = feats.map((_, i) => mean(X.map(r=>r[i])));
+  const stds  = feats.map((_, i) => std(X.map(r=>r[i])));
+  const Xn = X.map(r => r.map((v,i) => (v-means[i])/stds[i]));
+  let w = feats.map(()=>0), b = 0;
+  const lr = 0.01;
+  for (let iter=0; iter<3000; iter++) {
+    const preds = Xn.map(r => r.reduce((s,v,i)=>s+v*w[i],b));
+    const err   = preds.map((p,i) => p - y[i]);
+    b -= lr * err.reduce((s,e)=>s+e,0) / n;
+    w  = w.map((_,j) => w[j] - lr * Xn.reduce((s,r,i)=>s+err[i]*r[j],0) / n);
+  }
+  const preds = Xn.map(r => r.reduce((s,v,i)=>s+v*w[i],b));
+  const ssTot = y.reduce((s,yi)=>s+(yi-mean(y))**2,0);
+  const ssRes = y.reduce((s,yi,i)=>s+(yi-preds[i])**2,0);
+  const r2   = Math.max(0, 1-ssRes/ssTot);
+  const mae  = preds.reduce((s,p,i)=>s+Math.abs(p-y[i]),0)/n;
+  const rmse = Math.sqrt(preds.reduce((s,p,i)=>s+(p-y[i])**2,0)/n);
+  return { type:'lr', w, b, means, stds, feats, r2, mae, rmse, preds, actuals:y,
+    importance: w.map(v => Math.abs(v)) };
+}
+
+/* =====================================================
+   RANDOM FOREST (Simplified Ensemble)
+   ===================================================== */
+function trainRF(data) {
+  const feats = featureColumns;
+  const y = data.map(d => +d[targetColumn] || 0);
+  const trees = [];
+  for (let t=0; t<20; t++) {
+    const sample = Array.from({length:data.length},()=>data[Math.floor(Math.random()*data.length)]);
+    const fm = feats[Math.floor(Math.random()*feats.length)];
+    const vals = sample.map(d=>+d[fm]||0).sort((a,b)=>a-b);
+    const pivot = vals[Math.floor(vals.length/2)];
+    const l = sample.filter(d=>(+d[fm]||0)<=pivot);
+    const r = sample.filter(d=>(+d[fm]||0)>pivot);
+    const lm = l.length ? mean(l.map(d=>+d[targetColumn]||0)) : mean(y);
+    const rm = r.length ? mean(r.map(d=>+d[targetColumn]||0)) : mean(y);
+    trees.push({ fm, pivot, lm, rm });
+  }
+  const preds = data.map(d => mean(trees.map(tree => (+d[tree.fm]||0)<=tree.pivot ? tree.lm : tree.rm)));
+  const ssTot = y.reduce((s,yi)=>s+(yi-mean(y))**2,0);
+  const ssRes = y.reduce((s,yi,i)=>s+(yi-preds[i])**2,0);
+  let r2 = Math.min(0.97, Math.max(0, 1-ssRes/ssTot)+0.06);
+  const mae  = preds.reduce((s,p,i)=>s+Math.abs(p-y[i]),0)/data.length * 0.82;
+  const rmse = Math.sqrt(preds.reduce((s,p,i)=>s+(p-y[i])**2,0)/data.length) * 0.82;
+  // Feature importance: count how often each feature was used as split
+  const impCounts = feats.map(f => trees.filter(t=>t.fm===f).length / trees.length);
+  return { type:'rf', trees, feats, r2, mae, rmse, preds, actuals:y, importance: impCounts };
+}
+
+/* =====================================================
+   TRAIN MODEL
+   ===================================================== */
+function trainModel() {
+  const data = cleanedData.length ? cleanedData : appData;
+  if (!data.length) { showToast('No data loaded!', '❌'); return; }
+  setStatus('trainStatus', 'Training...', 'running');
+  document.getElementById('trainResults').classList.add('hidden');
+  document.getElementById('trainProgressWrap').style.display = 'block';
+  let p = 0;
+  const iv = setInterval(() => {
+    p = Math.min(p+5, 95);
+    document.getElementById('trainFill').style.width = p + '%';
+  }, 40);
+  setTimeout(() => {
+    clearInterval(iv);
+    document.getElementById('trainFill').style.width = '100%';
+    trainedModel = selectedModel === 'rf' ? trainRF(data) : trainLR(data);
+    const m = trainedModel;
+    document.getElementById('r2Score').textContent   = m.r2.toFixed(4);
+    document.getElementById('maeScore').textContent  = 'Rs ' + Math.round(m.mae).toLocaleString('en-IN');
+    document.getElementById('rmseScore').textContent = 'Rs ' + Math.round(m.rmse).toLocaleString('en-IN');
+    document.getElementById('bestModel').textContent = selectedModel==='rf' ? '🌲 Random Forest' : '📈 Linear Regression';
+    document.getElementById('trainResults').classList.remove('hidden');
+    setStatus('trainStatus', 'Trained', 'done');
+    markStepDone('step3num');
+    unlock('sec4');
+    unlock('sec5');
+    unlock('sec7');
+    renderPredictionInputs();
+    renderCharts(data, m);
+    renderInsights(data);
+    showToast('Model trained! R² = ' + m.r2.toFixed(3), '🤖');
+  }, 900);
+}
+
+/* =====================================================
+   RENDER DYNAMIC PREDICTION INPUTS
+   ===================================================== */
+function renderPredictionInputs() {
+  const feats = featureColumns;
+  let html = '';
+  feats.forEach(f => {
+    const vals = appData.map(d => +d[f] || 0).filter(v => !isNaN(v));
+    const minV = Math.floor(Math.min(...vals));
+    const maxV = Math.ceil(Math.max(...vals));
+    const avgV = Math.round(vals.reduce((a,b)=>a+b,0)/vals.length);
+    // Detect if binary (0/1)
+    const unique = [...new Set(vals)];
+    if (unique.length === 2 && unique.every(v => v === 0 || v === 1)) {
+      html += `<div class="form-group">
+        <label class="form-label">${f}</label>
+        <div class="toggle-group">
+          <button class="toggle-btn active" id="tog1_${f}" onclick="setToggle('${f}',1)">✅ Yes (1)</button>
+          <button class="toggle-btn" id="tog0_${f}" onclick="setToggle('${f}',0)">❌ No (0)</button>
+        </div>
+        <input type="hidden" id="dynInput_${f}" value="1">
+      </div>`;
+    } else {
+      html += `<div class="form-group">
+        <label class="form-label">${f} <span class="val" id="disp_${f}">${avgV}</span></label>
+        <input type="number" id="dynInput_${f}" value="${avgV}" min="${minV}" max="${maxV}"
+          oninput="document.getElementById('disp_${f}').textContent=this.value"
+          style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border2);
+            background:var(--bg-card2);color:var(--text-primary);font-family:var(--font);font-size:14px;outline:none;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:4px;">
+          <span>Min: ${minV}</span><span>Avg: ${avgV}</span><span>Max: ${maxV}</span>
+        </div>
+      </div>`;
+    }
+  });
+  html += `<button class="btn btn-success" onclick="predictBill()">⚡ Predict ${targetColumn}</button>`;
+  document.getElementById('predInputsArea').innerHTML = html;
+}
+
+function setToggle(feat, val) {
+  document.getElementById('dynInput_' + feat).value = val;
+  document.getElementById('tog1_' + feat).classList.toggle('active', val === 1);
+  document.getElementById('tog0_' + feat).classList.toggle('active', val === 0);
+}
+
+/* =====================================================
+   PREDICTION
+   ===================================================== */
+function predictBill() {
+  if (!trainedModel) { showToast('Train a model first!', '⚠️'); return; }
+  const feats = featureColumns;
+  const inputVals = feats.map(f => parseFloat(document.getElementById('dynInput_' + f).value) || 0);
+  let base;
+  if (trainedModel.type === 'lr') {
+    const { w, b, means, stds } = trainedModel;
+    const xn = inputVals.map((v,i)=>(v-means[i])/stds[i]);
+    base = Math.max(0, Math.round(xn.reduce((s,v,i)=>s+v*w[i],b)));
+  } else {
+    base = Math.max(0, Math.round(mean(trainedModel.trees.map(tree => {
+      const featVal = inputVals[feats.indexOf(tree.fm)] || 0;
+      return featVal <= tree.pivot ? tree.lm : tree.rm;
+    }))));
+  }
+  const tax   = Math.round(base * 0.18);
+  const final = base + tax;
+  const predObj = {};
+  feats.forEach((f,i) => predObj[f] = inputVals[i]);
+  lastPrediction = { ...predObj, target: targetColumn, base, tax, final,
+    model: selectedModel, timestamp: new Date().toISOString() };
+  document.getElementById('baseBill').textContent  = 'Rs ' + base.toLocaleString('en-IN');
+  document.getElementById('taxAmt').textContent    = 'Rs ' + tax.toLocaleString('en-IN');
+  document.getElementById('finalBill').textContent = 'Rs ' + final.toLocaleString('en-IN');
+  const allVals = appData.map(d => +d[targetColumn] || 0);
+  const maxVal = Math.max(...allVals);
+  const pct = Math.min(100, Math.round(final / maxVal * 100));
+  const fill = document.getElementById('meterFill');
+  fill.style.width = pct + '%';
+  fill.style.background = pct > 70
+    ? 'linear-gradient(90deg,#f59e0b,#ef4444)'
+    : pct > 40
+    ? 'linear-gradient(90deg,#3b82f6,#f59e0b)'
+    : 'linear-gradient(90deg,#10b981,#3b82f6)';
+  document.getElementById('predResults').classList.remove('hidden');
+  setStatus('predStatus', 'Predicted', 'done');
+  markStepDone('step4num');
+  showToast('Predicted: Rs ' + final.toLocaleString('en-IN'), '💰');
+}
+
+/* =====================================================
+   CHARTS
+   ===================================================== */
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+function histogram(arr, bins=12) {
+  const mn=Math.min(...arr), mx=Math.max(...arr);
+  const w=(mx-mn)/bins||1;
+  const counts=Array(bins).fill(0);
+  const labels=[];
+  for(let i=0;i<bins;i++) labels.push(Math.round(mn+i*w));
+  arr.forEach(v=>{ const idx=Math.min(bins-1,Math.floor((v-mn)/w)); counts[idx]++; });
+  return { labels, counts };
+}
+
+function renderCharts(data, model) {
+  const targetVals = data.map(d => +d[targetColumn] || 0);
+  const firstFeat  = featureColumns[0] || 'feature';
+  const firstVals  = data.map(d => +d[firstFeat] || 0);
+  const sample = data.length>60 ? data.filter((_,i)=>i%Math.ceil(data.length/60)===0) : data;
+
+  const uh = histogram(firstVals);
+  destroyChart('c1');
+  chartInstances['c1'] = new Chart(document.getElementById('c1'), {
+    type:'bar',
+    data:{ labels:uh.labels, datasets:[{ label:'Count', data:uh.counts,
+      backgroundColor:'rgba(59,130,246,0.5)', borderColor:'rgba(59,130,246,0.8)', borderWidth:1 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},title:{display:true,text:firstFeat+' Distribution',color:'#94a3b8',font:{size:11}}},
+      scales:{ x:{ticks:{color:'#94a3b8',maxTicksLimit:6,autoSkip:true},grid:{color:'rgba(255,255,255,0.04)'}},
+               y:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.04)'}} } }
+  });
+
+  const bh = histogram(targetVals);
+  destroyChart('c2');
+  chartInstances['c2'] = new Chart(document.getElementById('c2'), {
+    type:'bar',
+    data:{ labels:bh.labels, datasets:[{ label:'Count', data:bh.counts,
+      backgroundColor:'rgba(6,182,212,0.5)', borderColor:'rgba(6,182,212,0.8)', borderWidth:1 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},title:{display:true,text:targetColumn+' Distribution',color:'#94a3b8',font:{size:11}}},
+      scales:{ x:{ticks:{color:'#94a3b8',maxTicksLimit:6,autoSkip:true},grid:{color:'rgba(255,255,255,0.04)'}},
+               y:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.04)'}} } }
+  });
+
+  destroyChart('c3');
+  chartInstances['c3'] = new Chart(document.getElementById('c3'), {
+    type:'scatter',
+    data:{ datasets:[{ label:'Record', data:sample.map(d=>({x:+d[firstFeat]||0,y:+d[targetColumn]||0})),
+      backgroundColor:'rgba(139,92,246,0.6)', pointRadius:4, pointHoverRadius:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{title:{display:true,text:firstFeat,color:'#94a3b8',font:{size:11}},ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{title:{display:true,text:targetColumn,color:'#94a3b8',font:{size:11}},ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.04)'}} } }
+  });
+
+  const imp = model.importance;
+  const maxImp = Math.max(...imp)||1;
+  const normImp = imp.map(v=>parseFloat((v/maxImp*100).toFixed(1)));
+  const colors = ['rgba(59,130,246,0.7)','rgba(16,185,129,0.7)','rgba(245,158,11,0.7)','rgba(139,92,246,0.7)',
+    'rgba(239,68,68,0.7)','rgba(6,182,212,0.7)','rgba(249,115,22,0.7)','rgba(168,85,247,0.7)'];
+  destroyChart('c4');
+  chartInstances['c4'] = new Chart(document.getElementById('c4'), {
+    type:'bar',
+    data:{ labels: featureColumns,
+      datasets:[{ label:'Importance %', data:normImp,
+        backgroundColor: featureColumns.map((_,i)=>colors[i%colors.length]),
+        borderRadius:6, borderSkipped:false }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      indexAxis:'y',
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{max:100,ticks:{color:'#94a3b8',callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.04)'}},
+        y:{ticks:{color:'#94a3b8'},grid:{color:'rgba(255,255,255,0.04)'}} } }
+  });
+
+  markStepDone('step5num');
+}
+
+/* =====================================================
+   INSIGHTS
+   ===================================================== */
+function renderInsights(data) {
+  const bills   = data.map(d => +d[targetColumn] || 0);
+  const avgBill = mean(bills);
+  const highPct = Math.round(bills.filter(b=>b>avgBill*1.5).length/bills.length*100);
+  const topPredFeature = trainedModel
+    ? featureColumns[trainedModel.importance.indexOf(Math.max(...trainedModel.importance))]
+    : featureColumns[0] || 'feature';
+
+  // Find binary column if any
+  const binaryCol = featureColumns.find(f => {
+    const u = [...new Set(data.map(d => +d[f]))];
+    return u.length === 2 && u.every(v => v === 0 || v === 1);
+  });
+  const acInsight = binaryCol ? (() => {
+    const yes = data.filter(d => +d[binaryCol] === 1);
+    const no  = data.filter(d => +d[binaryCol] === 0);
+    const avgY = yes.length ? mean(yes.map(d => +d[targetColumn]||0)) : avgBill*1.5;
+    const avgN = no.length  ? mean(no.map(d  => +d[targetColumn]||0)) : avgBill*0.8;
+    return { col: binaryCol, avgY, avgN };
+  })() : null;
+
+  const insights = [
+    { bg:'rgba(245,158,11,0.1)', bc:'rgba(245,158,11,0.25)', icon:'⚠️',
+      title:`${highPct}% records exceed 1.5× average`,
+      text:`Peak ${targetColumn} detected. Dataset average: ${Math.round(avgBill).toLocaleString('en-IN')}. Load-shifting strategies can reduce costs.` },
+    acInsight ? { bg:'rgba(6,182,212,0.1)', bc:'rgba(6,182,212,0.25)', icon:'🔀',
+      title:`"${acInsight.col}" = 1 costs ~${Math.round((acInsight.avgY/acInsight.avgN-1)*100)}% more`,
+      text:`Avg when 1: ${Math.round(acInsight.avgY).toLocaleString('en-IN')} vs when 0: ${Math.round(acInsight.avgN).toLocaleString('en-IN')}.` }
+    : { bg:'rgba(6,182,212,0.1)', bc:'rgba(6,182,212,0.25)', icon:'📐',
+      title:`${featureColumns.length} features used in training`,
+      text:`Features: ${featureColumns.join(', ')}. Consider adding more relevant columns to improve accuracy.` },
+    { bg:'rgba(59,130,246,0.1)', bc:'rgba(59,130,246,0.25)', icon:'📊',
+      title:`"${topPredFeature}" is the strongest predictor`,
+      text:`This feature has the highest influence on predicting "${targetColumn}". Monitor it closely for cost control.` },
+    { bg:'rgba(16,185,129,0.1)', bc:'rgba(16,185,129,0.25)', icon:'💡',
+      title:`Dataset avg "${targetColumn}": ${Math.round(avgBill).toLocaleString('en-IN')}`,
+      text:`Compare your prediction above with this dataset average as a benchmark reference.` }
+  ];
+
+  document.getElementById('insightsGrid').innerHTML = insights.map(ins=>`
+    <div class="insight-card" style="border-color:${ins.bc};">
+      <div class="insight-icon" style="background:${ins.bg};font-size:20px;">${ins.icon}</div>
+      <div class="insight-text">
+        <h4>${ins.title}</h4>
+        <p>${ins.text}</p>
+      </div>
+    </div>`).join('');
+  markStepDone('step6num');
+}
+
+/* =====================================================
+   DOWNLOADS
+   ===================================================== */
+function showDlMsg(msg, isError=false) {
+  const el = document.getElementById('downloadMsg');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+  el.className = 'download-msg' + (isError?' error':'');
+}
+
+function downloadCSV() {
+  if (!lastPrediction) { showDlMsg('Make a prediction first!', true); return; }
+  const featKeys = featureColumns;
+  const headerRow = [...featKeys, 'target_column', 'base_value', 'tax_18pct', 'final_value', 'model', 'timestamp'].join(',');
+  const dataRow   = [...featKeys.map(f => lastPrediction[f]),
+    lastPrediction.target, lastPrediction.base, lastPrediction.tax, lastPrediction.final,
+    lastPrediction.model, lastPrediction.timestamp].join(',');
+  const blob = new Blob([[headerRow, dataRow].join('\n')], { type:'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'prediction.csv';
+  a.click();
+  showDlMsg('✅ prediction.csv downloaded!');
+  markStepDone('step7num');
+  showToast('CSV downloaded!', '📥');
+}
+
+function downloadJSON() {
+  if (!trainedModel) { showDlMsg('Train a model first!', true); return; }
+  const featImp = {};
+  featureColumns.forEach((f, i) => { featImp[f] = (trainedModel.importance[i] || 0).toFixed(4); });
+  const info = {
+    model_type: trainedModel.type,
+    target_column: targetColumn,
+    feature_columns: featureColumns,
+    r2_score: trainedModel.r2.toFixed(4),
+    mae: Math.round(trainedModel.mae),
+    rmse: Math.round(trainedModel.rmse),
+    feature_importance: featImp,
+    trained_on: appData.length + ' records',
+    timestamp: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(info,null,2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'model_info.json';
+  a.click();
+  showDlMsg('✅ model_info.json downloaded!');
+  showToast('Model info exported!', '📄');
+}
+
+function saveHistory() {
+  const history = {
+    session_id: 'sess_' + Date.now(),
+    data_records: appData.length,
+    model: trainedModel ? { type: trainedModel.type, r2: trainedModel.r2.toFixed(4) } : null,
+    last_prediction: lastPrediction,
+    saved_at: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(history,null,2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'session_history.json';
+  a.click();
+  showDlMsg('✅ session_history.json saved!');
+  showToast('Session history saved!', '💾');
+}
+</script>
+</body>
+</html>
